@@ -1,6 +1,10 @@
 import openpyxl # pip3.5 install openpyxl
 import docx # pip3.5 install python-docx
 import re
+import sys
+import os.path
+import tkinter as tk
+from tkinter import filedialog
 
 def esCeldaTitulo(celda):
     return celda.font.b
@@ -107,6 +111,8 @@ def escribirLineasPlanilla(hojaOut, listaDic, desdeFila):
         fila += 1
     return fila - desdeFila
 
+# Copia (solo texto) todos los párrafos del documento original al nuevo documento
+# reemplazando las plantillas y gagregando un salto de página al final
 def agregarParrafoWord(parrafos, docxOut, dic, invTitulo):
     for parrafo in parrafos:
         newText = parrafo.text
@@ -124,7 +130,7 @@ def agregarParrafoWord(parrafos, docxOut, dic, invTitulo):
                 else:
                     newText = newText.replace(match[0], '')
         docxOut.add_paragraph(newText)
-    return
+    docxOut.add_page_break()
 
 agregarParrafoWord.regex = re.compile(r'''(
     {([^{}<>]*?)<(\w+)>([^{}<>]*?)}
@@ -174,12 +180,48 @@ def procesarDocumento(xlsxIn, xlsxOut, docxIn, docxOut):
         hojaOut = xlsxOut.create_sheet(title=hoja.title);
         procesarHoja(hoja, hojaOut, parrafos, docxOut)
 
-xlsxIn = openpyxl.load_workbook('relevamiento.xlsx')
-xlsxOut = openpyxl.Workbook()
-docxIn = docx.Document('plantilla.docx')
-docxOut = docx.Document()
+# Se puede (1) pasar el nombre por línea de comando, (2) usar un nombre por default o (3) abrir con un diálogo
+def nombreExcelInput():
+    for arg in sys.argv[1:]:
+        name = nombreExcelInput.xlsxRegex.search(arg)
+        if name:
+            return name
+    if os.path.isfile(nombreExcelInput.defaultName):
+        return nombreExcelInput.defaultName
+    root = tk.Tk()
+    root.withdraw()
+    return filedialog.askopenfilename(filetypes=[('Documentos de Excel', '*.xlsx')], message='Relevamiento en Excel')
 
-procesarDocumento(xlsxIn, xlsxOut, docxIn, docxOut)
+nombreExcelInput.xlsxRegex = re.compile(r'^(.*?\.xlsx)$')
+nombreExcelInput.defaultName = 'relevamiento.xlsx'
 
-xlsxOut.save('relevamiento.listo.xlsx')
-docxOut.save('plantilla.lista.docx')
+
+# Se puede (1) pasar el nombre por línea de comando, (2) usar un nombre por default o (3) abrir con un diálogo
+def nombreWordInput():
+    for arg in sys.argv[1:]:
+        name = nombreWordInput.docxRegex.search(arg)
+        if name:
+            return name
+    if os.path.isfile(nombreWordInput.defaultName):
+        return nombreWordInput.defaultName
+    root = tk.Tk()
+    root.withdraw()
+    return filedialog.askopenfilename(filetypes=[('Documentos de Word', '*.docx')], message='Plantilla en Word')
+
+nombreWordInput.docxRegex = re.compile(r'^(.*?\.docx)$')
+nombreWordInput.defaultName = 'plantilla.docx'
+
+def procesarDocumentos():
+    nombreExcel = nombreExcelInput()
+    if nombreExcel:
+        nombreWord = nombreWordInput()
+        if nombreWord:
+            xlsxIn = openpyxl.load_workbook(nombreExcel)
+            xlsxOut = openpyxl.Workbook()
+            docxIn = docx.Document(nombreWord)
+            docxOut = docx.Document()
+            procesarDocumento(xlsxIn, xlsxOut, docxIn, docxOut)
+            xlsxOut.save('relevamiento.listo.xlsx')
+            docxOut.save('plantilla.lista.docx')
+
+procesarDocumentos()
