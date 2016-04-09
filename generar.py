@@ -223,5 +223,9 @@ def procesarDocumentos():
             procesarDocumento(xlsxIn, xlsxOut, docxIn, docxOut)
             xlsxOut.save('relevamiento.listo.xlsx')
             docxOut.save('plantilla.lista.docx')
+        else:
+            print('Falta el nombre del archivo Word')
+    else:
+        print('Falta el nombre del archivo Excel')
 
 procesarDocumentos()
